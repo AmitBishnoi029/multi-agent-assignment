@@ -1,7 +1,7 @@
 from langdetect import detect
 from googletrans import Translator
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from tools.mongodb_tool import MongoDBTool
 from agents.support_agent import SupportAgent
@@ -23,6 +23,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 uri = os.getenv("MONGODB_URI")
 db_tool = MongoDBTool(uri)
 
@@ -40,22 +41,32 @@ def root():
 def ask_support(request: QueryRequest):
     print("Received Query:", request.query)
 
-    #here we Skip language detection + translation
-    translated_query = request.query.lower()
+    original_lang = detect(request.query)
+    translated_query = translator.translate(request.query, src=original_lang, dest='en').text.lower()
+    print("Translated Query:", translated_query)
 
     response = support_agent.handle_query(translated_query)
+
+    if original_lang != 'en':
+        response = translator.translate(response, src='en', dest=original_lang).text
 
     print("Response:", response)
     return {"response": response}
 
 @app.post("/ask-dashboard")
 def ask_dashboard(request: QueryRequest):
-    original_lang = detect(request.query)
-    translated_query = translator.translate(request.query, src=original_lang, dest='en').text
+    try:
+        original_lang = detect(request.query)
+        translated_query = translator.translate(request.query, src=original_lang, dest='en').text.lower()
+        print("Translated Query:", translated_query)
 
-    response = dashboard_agent.handle_query(translated_query)
+        response = dashboard_agent.handle_query(translated_query)
 
-    if original_lang != 'en':
-        response = translator.translate(response, src='en', dest=original_lang).text
+        if original_lang != 'en':
+            response = translator.translate(response, src='en', dest=original_lang).text
 
-    return {"response": response}
+        return {"response": response}
+
+    except Exception as e:
+        print("Error in ask_dashboard:", e)
+        return {"response": "Something went wrong while processing your request."}

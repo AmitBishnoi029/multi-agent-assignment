@@ -13,28 +13,34 @@ class SupportAgent:
         print("Query received:", query)
 
         try:
+            #Here i Normalize query for consistent keyword matching
+            query = query.lower()
+
             if "create an order" in query:
-                print("Running _create_order")
                 return self._create_order(query)
 
             elif "create enquiry" in query or "new client" in query:
-                print("Running _create_client_enquiry")
                 return self._create_client_enquiry(query)
 
             elif "pending due" in query or "how much does" in query:
-                print("Running _calculate_pending_dues")
                 return self._calculate_pending_dues(query)
 
             elif "class" in query or "classes" in query:
-                print("Running _list_upcoming_classes")
                 return self._list_upcoming_classes()
 
             elif "order" in query:
-                print("Running _check_order_status")
                 return self._check_order_status(query)
 
+            elif (
+                "reset" in query and "password" in query
+                or "forgot password" in query
+                or "can't log in" in query
+                or "cannot log in" in query
+                or "unable to log in" in query
+            ):
+                return "To reset your password, click on 'Forgot Password' on the login page. If you still face issues, contact our support team."
+
             else:
-                print("Fallback triggered")
                 return "Sorry, I couldn't understand your request."
 
         except Exception as e:
